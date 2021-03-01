@@ -22,7 +22,7 @@ export declare class Notebook {
     getSize(): number;
     getAllCode(): string[];
     getLocsetByCell(cell_no: number): LocationSet;
-    getFuncs(cell_no: number): void;
+    getFuncs(cell_no: number): import("./data-flow").ApiUsage[];
     getDefs(cell_no: number): RefSet;
     getUses(cell_no: number): RefSet;
     slice(cell_no: number, direction?: SliceDirection, sorted?: boolean): LocationSet;

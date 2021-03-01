@@ -440,11 +440,7 @@ var ApiUsageAnalysis = /** @class */ (function (_super) {
     function ApiUsageAnalysis(statement, symbolTable, variableDefs) {
         var _this = _super.call(this, statement, symbolTable) || this;
         _this.variableDefs = variableDefs;
-        for (var _i = 0, _a = variableDefs.items; _i < _a.length; _i++) {
-            var d = _a[_i];
-            console.log(d.name);
-            console.log(d.node);
-        }
+        _this.usages = [];
         return _this;
     }
     ApiUsageAnalysis.prototype.onEnterNode = function (node, ancestors) {
@@ -461,7 +457,7 @@ var ApiUsageAnalysis = /** @class */ (function (_super) {
                 // It's a module call.
                 funcSpec = moduleSpec.functions.find(function (f) { return f.name === func.name; });
                 if (funcSpec) {
-                    console.log("find!", funcSpec.modulePath, func.name, node.location);
+                    this.usages.push({ modulePath: funcSpec.modulePath, funcName: func.name, location: node.location });
                 }
             }
             else {
@@ -474,7 +470,7 @@ var ApiUsageAnalysis = /** @class */ (function (_super) {
                         var funcName_1 = func.name;
                         funcSpec = receiverType.methods.find(function (m) { return m.name === funcName_1; });
                         if (funcSpec) {
-                            console.log("find!", funcSpec.modulePath, func.name, node.location);
+                            this.usages.push({ modulePath: funcSpec.modulePath, funcName: func.name, location: node.location });
                         }
                     }
                 }
@@ -482,7 +478,7 @@ var ApiUsageAnalysis = /** @class */ (function (_super) {
         }
         else if (func.type === ast.NAME) {
             if (this.symbolTable.lookupFunction(func.id)) {
-                console.log("find!", func.id, node.location);
+                this.usages.push({ modulePath: "__builtins__", funcName: func.id, location: node.location });
                 return;
             }
             // It's a function call.
@@ -492,7 +488,7 @@ var ApiUsageAnalysis = /** @class */ (function (_super) {
                     for (var _b = 0, _c = def.node.imports; _b < _c.length; _b++) {
                         var lib = _c[_b];
                         if (lib.path == func.id) {
-                            console.log("find!", def.node.base, func.id, node.location);
+                            this.usages.push({ modulePath: def.node.base, funcName: func.id, location: node.location });
                             return;
                         }
                     }

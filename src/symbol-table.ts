@@ -9,19 +9,22 @@ function mapDict<U, V>(obj: { [item: string]: U }, f: (item: U) => V): { [item: 
 }
 
 
-function cleanFunc(fdesc: FunctionDescription): FunctionSpec {
+function cleanFunc(fdesc: FunctionDescription, modulePath: string): FunctionSpec {
+	let spec: FunctionSpec;
 	if (typeof fdesc === 'string') {
-		return { name: fdesc, reads: [], updates: [] };
+		spec =  { name: fdesc, reads: [], updates: [] };
 	} else {
 		if (!fdesc.reads) { fdesc.reads = []; }
 		if (!fdesc.updates) { fdesc.updates = []; }
-		return fdesc;
+		spec = fdesc;
 	}
+	spec.modulePath = modulePath;
+	return spec;
 }
 
-function cleanType(tdesc: TypeSpec<FunctionDescription>): TypeSpec<FunctionSpec> {
+function cleanType(tdesc: TypeSpec<FunctionDescription>, modulePath: string): TypeSpec<FunctionSpec> {
 	return {
-		methods: tdesc.methods ? tdesc.methods.map(m => cleanFunc(m)) : []
+		methods: tdesc.methods ? tdesc.methods.map(m => cleanFunc(m, modulePath)) : []
 	};
 }
 
@@ -29,13 +32,11 @@ function cleanModule(mdesc: ModuleSpec<FunctionDescription>, parts: string[]): M
 	const modulePath = parts.join('.');
 	const mod: ModuleSpec<FunctionSpec> = {
 		functions: mdesc.functions ? mdesc.functions.map(f => { 
-			let cf = cleanFunc(f); 
-			cf.modulePath = modulePath;
+			let cf = cleanFunc(f, modulePath); 
 			return cf;
 		}) : [],
 		types: mdesc.types ? mapDict(mdesc.types, d => {
-			let ct = cleanType(d);
-			ct.methods.forEach(m => m.modulePath = modulePath);
+			let ct = cleanType(d, modulePath);
 			return ct;
 		}) : {},
 		modules: mdesc.modules ? mapDict(mdesc.modules, d => {
@@ -110,7 +111,7 @@ export class SymbolTable {
 		}
 		if (spec) {
 			imports.forEach(imp => {
-				const funs = spec.functions ? spec.functions.map(f => cleanFunc(f)) : [];
+				const funs = spec.functions ? spec.functions.map(f => cleanFunc(f, namePath)) : [];
 				if (imp.path === '*') {
 					funs.forEach(f => this.functions[f.name] = f);
 					if (spec.types) { Object.keys(spec.types).forEach(fname => this.types[fname] = spec.types[fname]); }

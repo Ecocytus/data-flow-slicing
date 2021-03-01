@@ -92,6 +92,7 @@ var Notebook = /** @class */ (function () {
         var defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
         var walker = new ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
         ast.walk(tree, walker);
+        return walker.usages;
     };
     Notebook.prototype.getDefs = function (cell_no) {
         var _this = this;

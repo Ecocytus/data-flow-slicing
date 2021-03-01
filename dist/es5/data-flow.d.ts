@@ -77,11 +77,17 @@ declare abstract class AnalysisWalker implements ast.WalkListener {
     constructor(_statement: ast.SyntaxNode, symbolTable: SymbolTable);
     abstract onEnterNode?(node: ast.SyntaxNode, ancestors: ast.SyntaxNode[]): any;
 }
+export interface ApiUsage {
+    modulePath: String;
+    funcName: String;
+    location: ast.Location;
+}
 /**
  * Tree walk listener for collecting names used in function call.
  */
 export declare class ApiUsageAnalysis extends AnalysisWalker {
     private variableDefs;
+    usages: Array<ApiUsage>;
     constructor(statement: ast.SyntaxNode, symbolTable: SymbolTable, variableDefs: RefSet);
     onEnterNode(node: ast.SyntaxNode, ancestors: ast.SyntaxNode[]): void;
 }

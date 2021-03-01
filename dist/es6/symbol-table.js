@@ -4,9 +4,10 @@ function mapDict(obj, f) {
     Object.keys(obj).forEach(function (k) { return result[k] = f(obj[k]); });
     return result;
 }
-function cleanFunc(fdesc) {
+function cleanFunc(fdesc, modulePath) {
+    var spec;
     if (typeof fdesc === 'string') {
-        return { name: fdesc, reads: [], updates: [] };
+        spec = { name: fdesc, reads: [], updates: [] };
     }
     else {
         if (!fdesc.reads) {
@@ -15,25 +16,25 @@ function cleanFunc(fdesc) {
         if (!fdesc.updates) {
             fdesc.updates = [];
         }
-        return fdesc;
+        spec = fdesc;
     }
+    spec.modulePath = modulePath;
+    return spec;
 }
-function cleanType(tdesc) {
+function cleanType(tdesc, modulePath) {
     return {
-        methods: tdesc.methods ? tdesc.methods.map(function (m) { return cleanFunc(m); }) : []
+        methods: tdesc.methods ? tdesc.methods.map(function (m) { return cleanFunc(m, modulePath); }) : []
     };
 }
 function cleanModule(mdesc, parts) {
     var modulePath = parts.join('.');
     var mod = {
         functions: mdesc.functions ? mdesc.functions.map(function (f) {
-            var cf = cleanFunc(f);
-            cf.modulePath = modulePath;
+            var cf = cleanFunc(f, modulePath);
             return cf;
         }) : [],
         types: mdesc.types ? mapDict(mdesc.types, function (d) {
-            var ct = cleanType(d);
-            ct.methods.forEach(function (m) { return m.modulePath = modulePath; });
+            var ct = cleanType(d, modulePath);
             return ct;
         }) : {},
         modules: mdesc.modules ? mapDict(mdesc.modules, function (d) {
@@ -109,7 +110,7 @@ var SymbolTable = /** @class */ (function () {
         }
         if (spec) {
             imports.forEach(function (imp) {
-                var funs = spec.functions ? spec.functions.map(function (f) { return cleanFunc(f); }) : [];
+                var funs = spec.functions ? spec.functions.map(function (f) { return cleanFunc(f, namePath); }) : [];
                 if (imp.path === '*') {
                     funs.forEach(function (f) { return _this.functions[f.name] = f; });
                     if (spec.types) {

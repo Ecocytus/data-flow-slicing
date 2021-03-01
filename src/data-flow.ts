@@ -440,18 +440,21 @@ class DefAnnotationAnalysis extends AnalysisWalker {
   }
 }
 
+export interface ApiUsage {
+  modulePath: String;
+  funcName: String;
+  location: ast.Location;
+}
 
 /**
  * Tree walk listener for collecting names used in function call.
  */
 export class ApiUsageAnalysis extends AnalysisWalker {
+  usages: Array<ApiUsage>;
 
   constructor(statement: ast.SyntaxNode, symbolTable: SymbolTable, private variableDefs: RefSet) {
     super(statement, symbolTable);
-    for (let d of variableDefs.items) {
-      console.log(d.name);
-      console.log(d.node);
-    }
+    this.usages = [];
   }
 
   onEnterNode(node: ast.SyntaxNode, ancestors: ast.SyntaxNode[]) {
@@ -467,7 +470,7 @@ export class ApiUsageAnalysis extends AnalysisWalker {
         // It's a module call.
         funcSpec = moduleSpec.functions.find(f => f.name === func.name);
         if (funcSpec) {
-          console.log("find!", funcSpec.modulePath, func.name, node.location);
+          this.usages.push({modulePath: funcSpec.modulePath, funcName: func.name, location: node.location})
         }
       } else {
         // It's a method call.
@@ -479,14 +482,14 @@ export class ApiUsageAnalysis extends AnalysisWalker {
             const funcName: string = func.name;
             funcSpec = receiverType.methods.find(m => m.name === funcName);
             if (funcSpec) {
-              console.log("find!", funcSpec.modulePath, func.name, node.location)
+              this.usages.push({modulePath: funcSpec.modulePath, funcName: func.name, location: node.location})
             }
           }
         }
       }
     } else if (func.type === ast.NAME) {
       if (this.symbolTable.lookupFunction(func.id)) {
-        console.log("find!", func.id, node.location);
+        this.usages.push({modulePath: "__builtins__", funcName: func.id, location: node.location})
         return;
       }
       // It's a function call.
@@ -494,7 +497,7 @@ export class ApiUsageAnalysis extends AnalysisWalker {
         if (def.type == SymbolType.IMPORT && def.node.type == ast.FROM) {
           for (let lib of def.node.imports) {
             if (lib.path == func.id) {
-              console.log("find!", def.node.base, func.id, node.location);
+              this.usages.push({modulePath: def.node.base, funcName: func.id, location: node.location})
               return;
             }
           }

@@ -114,6 +114,7 @@ export class Notebook {
     let defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
     var walker = new ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
     ast.walk(tree, walker);
+    return walker.usages;
   }
 
   getDefs(cell_no: number) {
