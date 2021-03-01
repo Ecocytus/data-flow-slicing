@@ -2,7 +2,7 @@
 
 import { MagicsRewriter } from "./rewrite-magics"
 import { ControlFlowGraph } from './control-flow';
-import { DataflowAnalyzer, RefSet } from './data-flow';
+import { DataflowAnalyzer, RefSet, ApiUsageAnalysis } from './data-flow';
 import { LocationSet, slice, SliceDirection } from './slice';
 import { Location } from './python-parser'
 import { DefaultSpecs, JsonSpecs, FunctionSpec, TypeSpec } from './specs';
@@ -108,20 +108,12 @@ export class Notebook {
   }
 
   getFuncs(cell_no: number) {
-    // var code = this.cells[cell_no].getSource().join('');
-    // var mod = ast.parse(code);
-    // var funcs = new RefSet();
-    // var defs = this.getDefs(cell_no);
-    // // console.log(defs)
-    // // for (let d of defs.items) {
-    // //   console.log(d.node)
-    // // }
-    // for (let statement of mod.code) {
-    //   var walker = new ApiCallAnalysisListener(statement, this.mOption, defs);
-    //   ast.walk(statement, walker);
-    //   funcs = funcs.union(walker.defs);
-    // }
-    // return funcs;
+    var code = this.cells[cell_no].getSource().join('');
+    let tree = ast.parse(code); 
+    let cfg = new ControlFlowGraph(tree);
+    let defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
+    var walker = new ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
+    ast.walk(tree, walker);
   }
 
   getDefs(cell_no: number) {

@@ -110,6 +110,9 @@ var DataflowAnalyzer = /** @class */ (function () {
         this._defUsesCache = {};
         this._symbolTable = new SymbolTable(moduleMap || DefaultSpecs);
     }
+    DataflowAnalyzer.prototype.getSymbolTable = function () {
+        return this._symbolTable;
+    };
     DataflowAnalyzer.prototype.getDefUseForStatement = function (statement, defsForMethodResolution) {
         var cacheKey = ast.locationString(statement.location);
         var cached = this._defUsesCache[cacheKey];
@@ -125,6 +128,7 @@ var DataflowAnalyzer = /** @class */ (function () {
     DataflowAnalyzer.prototype.analyze = function (cfg, refSet) {
         var workQueue = cfg.blocks.reverse();
         var undefinedRefs = new RefSet();
+        var statementDefs = new RefSet();
         var dataflows = new Set(getDataflowId);
         var defUsePerBlock = new Map(workQueue.map(function (block) { return [block.id, new DefUse()]; }));
         if (refSet) {
@@ -140,6 +144,7 @@ var DataflowAnalyzer = /** @class */ (function () {
                 var statementDefUse = this.getDefUseForStatement(statement, blockDefUse.defs);
                 var _b = statementDefUse.createFlowsFrom(blockDefUse), newFlows = _b[0], definedRefs = _b[1];
                 dataflows = dataflows.union(newFlows);
+                statementDefs = statementDefs.union(statementDefUse.defs);
                 undefinedRefs = undefinedRefs.union(statementDefUse.uses).minus(definedRefs);
                 blockDefUse.update(statementDefUse);
             }
@@ -157,7 +162,7 @@ var DataflowAnalyzer = /** @class */ (function () {
         cfg.visitControlDependencies(function (controlStmt, stmt) {
             return dataflows.add({ fromNode: controlStmt, toNode: stmt });
         });
-        return { dataflows: dataflows, undefinedRefs: undefinedRefs };
+        return { dataflows: dataflows, undefinedRefs: undefinedRefs, statementDefs: statementDefs };
     };
     DataflowAnalyzer.prototype.getDefs = function (statement, defsForMethodResolution) {
         if (!statement)
@@ -420,6 +425,77 @@ var DefAnnotationAnalysis = /** @class */ (function (_super) {
 /**
  * Tree walk listener for collecting names used in function call.
  */
+var ApiUsageAnalysis = /** @class */ (function (_super) {
+    __extends(ApiUsageAnalysis, _super);
+    function ApiUsageAnalysis(statement, symbolTable, variableDefs) {
+        var _this = _super.call(this, statement, symbolTable) || this;
+        _this.variableDefs = variableDefs;
+        for (var _i = 0, _a = variableDefs.items; _i < _a.length; _i++) {
+            var d = _a[_i];
+            console.log(d.name);
+            console.log(d.node);
+        }
+        return _this;
+    }
+    ApiUsageAnalysis.prototype.onEnterNode = function (node, ancestors) {
+        if (node.type !== ast.CALL) {
+            return;
+        }
+        var funcSpec;
+        var func = node.func;
+        if (func.type === ast.DOT && func.value.type === ast.NAME) {
+            // It's a method call or module call.
+            var receiver_1 = func.value;
+            var moduleSpec = this.symbolTable.modules[receiver_1.id];
+            if (moduleSpec) {
+                // It's a module call.
+                funcSpec = moduleSpec.functions.find(function (f) { return f.name === func.name; });
+                if (funcSpec) {
+                    console.log("find!", funcSpec.modulePath, func.name, node.location);
+                }
+            }
+            else {
+                // It's a method call.
+                var ref = this.variableDefs.items.find(function (r) { return r.name === receiver_1.id; });
+                if (ref) {
+                    // The lefthand side of the dot is a variable we're tracking, so it's a method call.
+                    var receiverType = ref.inferredType;
+                    if (receiverType) {
+                        var funcName_1 = func.name;
+                        funcSpec = receiverType.methods.find(function (m) { return m.name === funcName_1; });
+                        if (funcSpec) {
+                            console.log("find!", funcSpec.modulePath, func.name, node.location);
+                        }
+                    }
+                }
+            }
+        }
+        else if (func.type === ast.NAME) {
+            if (this.symbolTable.lookupFunction(func.id)) {
+                console.log("find!", func.id, node.location);
+                return;
+            }
+            // It's a function call.
+            for (var _i = 0, _a = this.variableDefs.items; _i < _a.length; _i++) {
+                var def = _a[_i];
+                if (def.type == SymbolType.IMPORT && def.node.type == ast.FROM) {
+                    for (var _b = 0, _c = def.node.imports; _b < _c.length; _b++) {
+                        var lib = _c[_b];
+                        if (lib.path == func.id) {
+                            console.log("find!", def.node.base, func.id, node.location);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    };
+    return ApiUsageAnalysis;
+}(AnalysisWalker));
+export { ApiUsageAnalysis };
+/**
+ * Tree walk listener for collecting names used in function call.
+ */
 var ApiCallAnalysis = /** @class */ (function (_super) {
     __extends(ApiCallAnalysis, _super);
     function ApiCallAnalysis(statement, symbolTable, variableDefs) {
@@ -436,21 +512,21 @@ var ApiCallAnalysis = /** @class */ (function (_super) {
         var func = node.func;
         if (func.type === ast.DOT && func.value.type === ast.NAME) {
             // It's a method call or module call.
-            var receiver_1 = func.value;
-            var moduleSpec = this.symbolTable.modules[receiver_1.id];
+            var receiver_2 = func.value;
+            var moduleSpec = this.symbolTable.modules[receiver_2.id];
             if (moduleSpec) {
                 // It's a module call.
                 funcSpec = moduleSpec.functions.find(function (f) { return f.name === func.name; });
             }
             else {
                 // It's a method call.
-                var ref = this.variableDefs.items.find(function (r) { return r.name === receiver_1.id; });
+                var ref = this.variableDefs.items.find(function (r) { return r.name === receiver_2.id; });
                 if (ref) {
                     // The lefthand side of the dot is a variable we're tracking, so it's a method call.
                     var receiverType = ref.inferredType;
                     if (receiverType) {
-                        var funcName_1 = func.name;
-                        funcSpec = receiverType.methods.find(function (m) { return m.name === funcName_1; });
+                        var funcName_2 = func.name;
+                        funcSpec = receiverType.methods.find(function (m) { return m.name === funcName_2; });
                     }
                 }
             }

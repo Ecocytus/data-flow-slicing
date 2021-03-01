@@ -1,3 +1,4 @@
+import { sep } from "node:path";
 import { FunctionDescription, FunctionSpec, TypeSpec, ModuleSpec, ModuleMap, JsonSpecs } from ".";
 import * as ast from './python-parser';
 
@@ -24,11 +25,24 @@ function cleanType(tdesc: TypeSpec<FunctionDescription>): TypeSpec<FunctionSpec>
 	};
 }
 
-function cleanModule(mdesc: ModuleSpec<FunctionDescription>): ModuleSpec<FunctionSpec> {
+function cleanModule(mdesc: ModuleSpec<FunctionDescription>, parts: string[]): ModuleSpec<FunctionSpec> {
+	const modulePath = parts.join('.');
 	const mod: ModuleSpec<FunctionSpec> = {
-		functions: mdesc.functions ? mdesc.functions.map(f => cleanFunc(f)) : [],
-		types: mdesc.types ? mapDict(mdesc.types, cleanType) : {},
-		modules: mdesc.modules ? mapDict(mdesc.modules, cleanModule) : {}
+		functions: mdesc.functions ? mdesc.functions.map(f => { 
+			let cf = cleanFunc(f); 
+			cf.modulePath = modulePath;
+			return cf;
+		}) : [],
+		types: mdesc.types ? mapDict(mdesc.types, d => {
+			let ct = cleanType(d);
+			ct.methods.forEach(m => m.modulePath = modulePath);
+			return ct;
+		}) : {},
+		modules: mdesc.modules ? mapDict(mdesc.modules, d => {
+			// TODO: is that correct?
+			let cm = cleanModule(d, parts.slice(1));
+			return cm;
+		}) : {}
 	};
 	mod.functions.forEach(f => {
 		if (f.returns) { f.returnsType = mod.types[f.returns]; }
@@ -113,13 +127,17 @@ export class SymbolTable {
 	}
 
 	private lookupSpec(map: JsonSpecs, parts: string[]): ModuleSpec<FunctionSpec> {
+		return this.lookupSpecRec(map, parts, 0);
+	}
+
+	private lookupSpecRec(map: JsonSpecs, parts: string[], idx: number): ModuleSpec<FunctionSpec> {
 		if (!map || parts.length == 0) { return undefined; }
-		const spec = map[parts[0]];
+		const spec = map[parts[idx]];
 		if (!spec) { return undefined; }
-		if (parts.length > 1) {
-			return this.lookupSpec(spec.modules, parts.slice(1));
+		if (idx+1 < parts.length) {
+			return this.lookupSpecRec(spec.modules, parts, idx+1);
 		} else {
-			return cleanModule(spec);
+			return cleanModule(spec, parts);
 		}
 	}
 }

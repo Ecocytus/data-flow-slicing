@@ -12,6 +12,7 @@ export interface FunctionSpec {
   returns?: string;
   returnsType?: TypeSpec<FunctionSpec>;
   higherorder?: number;
+  modulePath?: String;
 }
 
 export type FunctionDescription = string | FunctionSpec;

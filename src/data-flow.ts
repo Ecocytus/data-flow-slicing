@@ -91,6 +91,10 @@ export class DataflowAnalyzer {
     this._symbolTable = new SymbolTable(moduleMap || DefaultSpecs);
   }
 
+  getSymbolTable() {
+    return this._symbolTable;
+  }
+
   getDefUseForStatement(statement: ast.SyntaxNode, defsForMethodResolution: RefSet): DefUse {
     let cacheKey = ast.locationString(statement.location);
     const cached = this._defUsesCache[cacheKey];
@@ -110,6 +114,7 @@ export class DataflowAnalyzer {
   analyze(cfg: ControlFlowGraph, refSet?: RefSet): DataflowAnalysisResult {
     const workQueue: Block[] = cfg.blocks.reverse();
     let undefinedRefs = new RefSet();
+    let statementDefs = new RefSet();
     let dataflows = new Set<Dataflow>(getDataflowId);
     let defUsePerBlock = new Map(workQueue.map(block => [block.id, new DefUse()]));
     if (refSet) {
@@ -126,6 +131,7 @@ export class DataflowAnalyzer {
         let statementDefUse = this.getDefUseForStatement(statement, blockDefUse.defs);
         let [newFlows, definedRefs] = statementDefUse.createFlowsFrom(blockDefUse);
         dataflows = dataflows.union(newFlows);
+        statementDefs = statementDefs.union(statementDefUse.defs);
         undefinedRefs = undefinedRefs.union(statementDefUse.uses).minus(definedRefs);
         blockDefUse.update(statementDefUse);
       }
@@ -144,7 +150,7 @@ export class DataflowAnalyzer {
     cfg.visitControlDependencies((controlStmt, stmt) =>
       dataflows.add({ fromNode: controlStmt, toNode: stmt }));
 
-    return { dataflows, undefinedRefs };
+    return { dataflows, undefinedRefs, statementDefs };
   }
 
   getDefs(statement: ast.SyntaxNode, defsForMethodResolution: RefSet): RefSet {
@@ -435,6 +441,70 @@ class DefAnnotationAnalysis extends AnalysisWalker {
 }
 
 
+/**
+ * Tree walk listener for collecting names used in function call.
+ */
+export class ApiUsageAnalysis extends AnalysisWalker {
+
+  constructor(statement: ast.SyntaxNode, symbolTable: SymbolTable, private variableDefs: RefSet) {
+    super(statement, symbolTable);
+    for (let d of variableDefs.items) {
+      console.log(d.name);
+      console.log(d.node);
+    }
+  }
+
+  onEnterNode(node: ast.SyntaxNode, ancestors: ast.SyntaxNode[]) {
+    if (node.type !== ast.CALL) { return; }
+
+    let funcSpec: FunctionSpec;
+    const func = node.func;
+    if (func.type === ast.DOT && func.value.type === ast.NAME) {
+      // It's a method call or module call.
+      const receiver = func.value;
+      const moduleSpec = this.symbolTable.modules[receiver.id];
+      if (moduleSpec) {
+        // It's a module call.
+        funcSpec = moduleSpec.functions.find(f => f.name === func.name);
+        if (funcSpec) {
+          console.log("find!", funcSpec.modulePath, func.name, node.location);
+        }
+      } else {
+        // It's a method call.
+        const ref = this.variableDefs.items.find(r => r.name === receiver.id);
+        if (ref) {
+          // The lefthand side of the dot is a variable we're tracking, so it's a method call.
+          const receiverType = ref.inferredType;
+          if (receiverType) {
+            const funcName: string = func.name;
+            funcSpec = receiverType.methods.find(m => m.name === funcName);
+            if (funcSpec) {
+              console.log("find!", funcSpec.modulePath, func.name, node.location)
+            }
+          }
+        }
+      }
+    } else if (func.type === ast.NAME) {
+      if (this.symbolTable.lookupFunction(func.id)) {
+        console.log("find!", func.id, node.location);
+        return;
+      }
+      // It's a function call.
+      for (let def of this.variableDefs.items) {
+        if (def.type == SymbolType.IMPORT && def.node.type == ast.FROM) {
+          for (let lib of def.node.imports) {
+            if (lib.path == func.id) {
+              console.log("find!", def.node.base, func.id, node.location);
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
 
 
 /**
@@ -677,4 +747,5 @@ function getDataflowId(df: Dataflow) {
 export type DataflowAnalysisResult = {
   dataflows: Set<Dataflow>;
   undefinedRefs: RefSet;
+  statementDefs: RefSet;
 };

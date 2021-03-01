@@ -19,4 +19,5 @@ export declare class SymbolTable {
         name: string;
     }[]): ModuleSpec<FunctionSpec>;
     private lookupSpec;
+    private lookupSpecRec;
 }

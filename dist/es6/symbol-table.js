@@ -23,11 +23,24 @@ function cleanType(tdesc) {
         methods: tdesc.methods ? tdesc.methods.map(function (m) { return cleanFunc(m); }) : []
     };
 }
-function cleanModule(mdesc) {
+function cleanModule(mdesc, parts) {
+    var modulePath = parts.join('.');
     var mod = {
-        functions: mdesc.functions ? mdesc.functions.map(function (f) { return cleanFunc(f); }) : [],
-        types: mdesc.types ? mapDict(mdesc.types, cleanType) : {},
-        modules: mdesc.modules ? mapDict(mdesc.modules, cleanModule) : {}
+        functions: mdesc.functions ? mdesc.functions.map(function (f) {
+            var cf = cleanFunc(f);
+            cf.modulePath = modulePath;
+            return cf;
+        }) : [],
+        types: mdesc.types ? mapDict(mdesc.types, function (d) {
+            var ct = cleanType(d);
+            ct.methods.forEach(function (m) { return m.modulePath = modulePath; });
+            return ct;
+        }) : {},
+        modules: mdesc.modules ? mapDict(mdesc.modules, function (d) {
+            // TODO: is that correct?
+            var cm = cleanModule(d, parts.slice(1));
+            return cm;
+        }) : {}
     };
     mod.functions.forEach(function (f) {
         if (f.returns) {
@@ -119,18 +132,21 @@ var SymbolTable = /** @class */ (function () {
         }
     };
     SymbolTable.prototype.lookupSpec = function (map, parts) {
+        return this.lookupSpecRec(map, parts, 0);
+    };
+    SymbolTable.prototype.lookupSpecRec = function (map, parts, idx) {
         if (!map || parts.length == 0) {
             return undefined;
         }
-        var spec = map[parts[0]];
+        var spec = map[parts[idx]];
         if (!spec) {
             return undefined;
         }
-        if (parts.length > 1) {
-            return this.lookupSpec(spec.modules, parts.slice(1));
+        if (idx + 1 < parts.length) {
+            return this.lookupSpecRec(spec.modules, parts, idx + 1);
         }
         else {
-            return cleanModule(spec);
+            return cleanModule(spec, parts);
         }
     };
     return SymbolTable;

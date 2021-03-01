@@ -2,6 +2,7 @@ import * as ast from './python-parser';
 import { ControlFlowGraph } from './control-flow';
 import { Set } from './set';
 import { JsonSpecs, FunctionSpec, TypeSpec } from './specs';
+import { SymbolTable } from './symbol-table';
 declare class DefUse {
     DEFINITION: RefSet;
     UPDATE: RefSet;
@@ -21,6 +22,7 @@ declare class DefUse {
  */
 export declare class DataflowAnalyzer {
     constructor(moduleMap?: JsonSpecs);
+    getSymbolTable(): SymbolTable;
     getDefUseForStatement(statement: ast.SyntaxNode, defsForMethodResolution: RefSet): DefUse;
     analyze(cfg: ControlFlowGraph, refSet?: RefSet): DataflowAnalysisResult;
     getDefs(statement: ast.SyntaxNode, defsForMethodResolution: RefSet): RefSet;
@@ -68,8 +70,24 @@ export declare class RefSet extends Set<Ref> {
     constructor(...items: Ref[]);
 }
 export declare function sameLocation(loc1: ast.Location, loc2: ast.Location): boolean;
+declare abstract class AnalysisWalker implements ast.WalkListener {
+    protected _statement: ast.SyntaxNode;
+    protected symbolTable: SymbolTable;
+    readonly defs: RefSet;
+    constructor(_statement: ast.SyntaxNode, symbolTable: SymbolTable);
+    abstract onEnterNode?(node: ast.SyntaxNode, ancestors: ast.SyntaxNode[]): any;
+}
+/**
+ * Tree walk listener for collecting names used in function call.
+ */
+export declare class ApiUsageAnalysis extends AnalysisWalker {
+    private variableDefs;
+    constructor(statement: ast.SyntaxNode, symbolTable: SymbolTable, variableDefs: RefSet);
+    onEnterNode(node: ast.SyntaxNode, ancestors: ast.SyntaxNode[]): void;
+}
 export declare type DataflowAnalysisResult = {
     dataflows: Set<Dataflow>;
     undefinedRefs: RefSet;
+    statementDefs: RefSet;
 };
 export {};
