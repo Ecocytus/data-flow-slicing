@@ -23,7 +23,18 @@ var MagicsRewriter = /** @class */ (function () {
     MagicsRewriter.prototype.rewrite = function (text, lineMagicRewriters) {
         text = this.rewriteCellMagic(text);
         text = this.rewriteLineMagic(text, this._lineMagicRewriters);
+        text = this.rewriteLineExclamationMark(text);
         return text;
+    };
+    MagicsRewriter.prototype.rewriteLineExclamationMark = function (text) {
+        return text.replace(/^\s*(!(?:\\\s*\n|[^\n])+)/gm, function (match, magicStmt) {
+            // console.log("find", match, magicStmt);
+            var rewriteText = match
+                .split('\n')
+                .map(function (s) { return '#' + s; })
+                .join('\n');
+            return rewriteText;
+        });
     };
     /**
      * Default rewrite rule for cell magics.

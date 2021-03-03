@@ -67,7 +67,19 @@ export class MagicsRewriter {
   rewrite(text: string, lineMagicRewriters?: LineMagicRewriter[]) {
     text = this.rewriteCellMagic(text);
     text = this.rewriteLineMagic(text, this._lineMagicRewriters);
+    text = this.rewriteLineExclamationMark(text);
     return text;
+  }
+
+  rewriteLineExclamationMark(text) {
+    return text.replace(/^\s*(!(?:\\\s*\n|[^\n])+)/gm, (match, magicStmt) => {
+      // console.log("find", match, magicStmt);
+      let rewriteText = match
+          .split('\n')
+          .map(s => '#' + s)
+          .join('\n');
+      return rewriteText;
+    });
   }
 
   /**

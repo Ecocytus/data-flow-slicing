@@ -55,6 +55,7 @@ export declare class MagicsRewriter {
      * Rewrite code so that it doesn't contain magics.
      */
     rewrite(text: string, lineMagicRewriters?: LineMagicRewriter[]): string;
+    rewriteLineExclamationMark(text: any): any;
     /**
      * Default rewrite rule for cell magics.
      */

@@ -1,8 +1,5 @@
 "use strict";
 // import {MagicsRewriter, RefSet, walk, parse, ControlFlowGraph, DataflowAnalyzer, DataflowAnalyzerOptions, slice, SliceDirection, LocationSet, SyntaxNode, Location}
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -10,21 +7,25 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var rewrite_magics_1 = require("./rewrite-magics");
 var control_flow_1 = require("./control-flow");
 var data_flow_1 = require("./data-flow");
 var slice_1 = require("./slice");
 var specs_1 = require("./specs");
+var visSpec = __importStar(require("./visualization_spec.json"));
 var fs_1 = __importDefault(require("fs"));
 var ast = __importStar(require("./python-parser"));
-// import { ApiCallAnalysisListener } from "./analysis-listener"
 var NBCell = /** @class */ (function () {
     function NBCell(source, id) {
         this.source = source;
         this.id = id;
     }
     NBCell.prototype.getSource = function () { return this.source; };
+    NBCell.prototype.getLength = function () { return this.source.length; };
     return NBCell;
 }());
 exports.NBCell = NBCell;
@@ -67,18 +68,23 @@ var Notebook = /** @class */ (function () {
             var c = _e[_d];
             this.source = this.source.concat(c.getSource());
         }
-        this.tree = ast.parse(this.source.join(''));
-        this.cfg = new control_flow_1.ControlFlowGraph(this.tree);
         // TODO: more module options
         this.moduleMap = specs_1.DefaultSpecs;
         this.analyzer = new data_flow_1.DataflowAnalyzer(this.moduleMap);
     }
     Notebook.prototype.getCell = function (id) { return this.cells[id]; };
+    Notebook.prototype.getCellNo = function (line_no) {
+        var cell_no = 0;
+        while (this.cells[cell_no].getLength() < line_no) {
+            line_no -= this.cells[cell_no].getLength();
+            cell_no += 1;
+        }
+        return cell_no;
+    };
     Notebook.prototype.getSize = function () { return this.cells.length; };
     Notebook.prototype.getAllCode = function () { return this.source; };
     // *********** idx starts at 1 ***********
     Notebook.prototype.getLocsetByCell = function (cell_no) {
-        // assert(cell_no < this.cells.length);
         var loc_set = new slice_1.LocationSet();
         if (this.cells[cell_no].getSource().length == 0) {
             return loc_set;
@@ -97,11 +103,15 @@ var Notebook = /** @class */ (function () {
         });
         return loc_set;
     };
+    // get dependent code location and function usage
     Notebook.prototype.getFuncs = function (cell_no) {
-        var code = this.cells[cell_no].getSource().join('');
-        var tree = ast.parse(code);
-        var cfg = new control_flow_1.ControlFlowGraph(tree);
-        var defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
+        var dep_locset = this.slice(cell_no, slice_1.SliceDirection.Backward, true);
+        // get all dependent code
+        var code_dep = this.getCodeByLocSet(dep_locset).join('');
+        var code_cell = this.cells[cell_no].getSource().join('');
+        // get definition from dependent code
+        var defsForMethodResolution = this.analyzer.analyze(new control_flow_1.ControlFlowGraph(ast.parse(code_dep))).statementDefs;
+        var tree = ast.parse(code_cell);
         var walker = new data_flow_1.ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
         ast.walk(tree, walker);
         return walker.usages;
@@ -131,7 +141,7 @@ var Notebook = /** @class */ (function () {
             sorted = true;
         }
         var seed = this.getLocsetByCell(cell_no);
-        var loc_set = slice_1.slice(this.tree, seed, undefined, direction);
+        var loc_set = slice_1.slice(this.tree, seed, this.analyzer, direction);
         if (sorted) {
             var sorted_items = loc_set.items.sort(function (a, b) { return (a.first_line < b.first_line ? -1 : 1); });
             var sorted_locset = new slice_1.LocationSet();
@@ -143,7 +153,6 @@ var Notebook = /** @class */ (function () {
         }
     };
     Notebook.prototype.getCodeByLoc = function (loc, col_slicing) {
-        console.log(loc);
         if (loc == undefined) {
             return [""];
         }
@@ -169,9 +178,142 @@ var Notebook = /** @class */ (function () {
         }
         return codes;
     };
+    Notebook.prototype.getCodeByLocSet = function (locset, col_slicing) {
+        var codes = [];
+        for (var _i = 0, _a = locset.items; _i < _a.length; _i++) {
+            var loc = _a[_i];
+            codes = codes.concat(this.getCodeByLoc(loc, col_slicing));
+        }
+        return codes;
+    };
+    Notebook.prototype._splitSeeds = function (plotSeedLocations) {
+        var sorted_seeds = plotSeedLocations.items.sort(function (a, b) { return (a.first_line < b.first_line ? -1 : 1); });
+        var seed_list = [];
+        var pre_cellno = 1;
+        var _loop_1 = function (idx) {
+            var cell = this_1.cells[idx];
+            var cur_cellno = pre_cellno + cell.getLength();
+            cur_loc = new slice_1.LocationSet();
+            sorted_seeds.filter(function (a) {
+                var last_line = a.last_line;
+                if (a.last_column == 0) {
+                    last_line -= 1;
+                }
+                return last_line < cur_cellno && last_line >= pre_cellno;
+            }).forEach(function (a) { return cur_loc.add(a); });
+            if (!cur_loc.empty) {
+                seed_list.push([cur_loc, idx]);
+            }
+            pre_cellno = cur_cellno;
+        };
+        var this_1 = this, cur_loc;
+        for (var idx = 0; idx < this.cells.length; ++idx) {
+            _loop_1(idx);
+        }
+        return seed_list;
+    };
+    Notebook.prototype._runAnalysis = function (source, defsForMethodResolution) {
+        var temp_tree = ast.parse(source);
+        var temp_walker = new data_flow_1.ApiUsageAnalysis(temp_tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
+        ast.walk(temp_tree, temp_walker);
+        return temp_walker.usages;
+    };
+    // used for dataset preprocess, it will generate all different dependency 
+    Notebook.prototype.extractEDA = function (output_path) {
+        // get all dependent code
+        var code = this.source.join('');
+        var tree = ast.parse(code);
+        var cfg = new control_flow_1.ControlFlowGraph(tree);
+        // get definition from dependent code
+        var defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
+        var walker = new data_flow_1.ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
+        ast.walk(tree, walker);
+        // console.log(walker.usages)
+        var file_count = 0;
+        var _loop_2 = function (usage) {
+            if (isVisualization(usage)) {
+                var seed = new slice_1.LocationSet(usage.location);
+                var loc_set = slice_1.slice(tree, seed, this_2.analyzer, slice_1.SliceDirection.Backward);
+                var cur_line = 0; // line number of sliced code
+                var cell_usage_list = [];
+                // TODO: findout why sometime slicing is wrong, e.g. in 12718015.ipynb
+                var splited_set = this_2._splitSeeds(loc_set);
+                var source = '';
+                var want_1 = false;
+                for (var _i = 0, splited_set_1 = splited_set; _i < splited_set_1.length; _i++) {
+                    var _a = splited_set_1[_i], loc = _a[0], cell_no = _a[1];
+                    var temp_code = this_2.getCodeByLocSet(loc);
+                    source += temp_code.join('');
+                    cur_line += temp_code.length;
+                    var usages = [];
+                    try {
+                        usages = this_2._runAnalysis(temp_code.join(''), defsForMethodResolution);
+                    }
+                    catch (_b) { }
+                    if (usages.length == 0) {
+                        console.log("ignore");
+                        continue;
+                    }
+                    usages.forEach(function (u) {
+                        if (u.modulePath != '__builtins__') {
+                            want_1 = true;
+                        }
+                    });
+                    cell_usage_list.push(convertToCellUsage(usages, cur_line));
+                }
+                if (want_1) {
+                    fs_1.default.writeFile(output_path + "_" + file_count + ".py", source, function (err) {
+                        if (err)
+                            throw err;
+                    });
+                    var createCsvWriter = require('csv-writer').createObjectCsvWriter;
+                    var csvWriter = createCsvWriter({
+                        path: output_path + "_" + file_count + ".csv",
+                        header: [
+                            { id: 'cell_line', title: 'CELL' },
+                            { id: 'usage', title: 'USAGE' }
+                        ]
+                    });
+                    csvWriter.writeRecords(cell_usage_list)
+                        .then(function () { });
+                    file_count += 1;
+                }
+            }
+        };
+        var this_2 = this;
+        for (var _i = 0, _a = walker.usages; _i < _a.length; _i++) {
+            var usage = _a[_i];
+            _loop_2(usage);
+        }
+    };
     return Notebook;
 }());
 exports.Notebook = Notebook;
+function convertToCellUsage(apiUsages, cell_line) {
+    var usageSet = new Set();
+    for (var _i = 0, apiUsages_1 = apiUsages; _i < apiUsages_1.length; _i++) {
+        var u = apiUsages_1[_i];
+        usageSet.add(u.modulePath + ', ' + u.funcName);
+    }
+    return { cell_line: cell_line, usage: Array.from(usageSet).join(', ') };
+}
+function isVisualization(usage) {
+    var path = usage.modulePath.split('.');
+    var spec = visSpec;
+    while (path.length > 0 && spec.hasOwnProperty(path[0])) {
+        spec = spec[path.shift()];
+    }
+    if (Array.isArray(spec)) {
+        // reach the func list
+        if (spec[0] == "*") {
+            return true;
+        }
+        else {
+            return path.length == 0 && spec.find(function (s) { return s == usage.funcName; });
+        }
+    }
+    return false;
+}
 function parse_func(func) {
     var lib_name = "";
     var func_name = "";

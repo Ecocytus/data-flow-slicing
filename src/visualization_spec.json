@@ -1,0 +1,14 @@
+{
+  "__builtins__": [
+      "print"
+    ],
+	"matplotlib": [
+			"*"
+	],
+	"pandas": [
+		"head",
+		"tail",
+		"describe",
+		"summary"
+	]
+}
