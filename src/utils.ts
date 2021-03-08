@@ -70,6 +70,7 @@ export class Notebook {
     }
 
     // TODO: more module options
+    this.tree = ast.parse(this.source.join(''));
     this.moduleMap = DefaultSpecs
     this.analyzer = new DataflowAnalyzer(this.moduleMap);
 
@@ -233,7 +234,7 @@ export class Notebook {
   
 
   // used for dataset preprocess, it will generate all different dependency 
-  extractEDA(output_path: string) {
+  extractEDA(output_path: string, name: string) {
     // get all dependent code
     var code= this.source.join('');
     var tree = ast.parse(code)
@@ -247,7 +248,8 @@ export class Notebook {
     for (let usage of walker.usages) {
       if (isVisualization(usage)) {
         let seed = new LocationSet(usage.location);
-        let loc_set = slice(tree, seed, this.analyzer, SliceDirection.Backward)
+        // console.log(`${file_count}: slice out based on: ` + this.getCodeByLoc(usage.location));
+        let loc_set = slice(tree, seed, this.analyzer, SliceDirection.Backward);
         let cur_line = 0; // line number of sliced code
         let cell_usage_list: CellUsage[] = [];
         // TODO: findout why sometime slicing is wrong, e.g. in 12718015.ipynb
@@ -263,12 +265,12 @@ export class Notebook {
             usages = this._runAnalysis(temp_code.join(''), defsForMethodResolution);
           } catch {}
           if (usages.length == 0) {
-            console.log("ignore");
+            // console.log("ignore");
             continue;
           }
           
           usages.forEach(u => {
-            if (u.modulePath != '__builtins__') {
+            if (u.modulePath != '__builtins__' && u.modulePath.split('.')[0] != 'matplotlib') {
               want = true;
             }
           });
@@ -276,13 +278,13 @@ export class Notebook {
         }
 
         if (want) {
-          fs.writeFile(`${output_path}_${file_count}.py`, source, function(err) {
+          fs.writeFile(`${output_path}/${name}_${file_count}.py`, source, function(err) {
             if (err) throw err;
           });
 
           const createCsvWriter = require('csv-writer').createObjectCsvWriter;
           const csvWriter = createCsvWriter({
-              path: `${output_path}_${file_count}.csv`,
+              path: `${output_path}/${name}_${file_count}.csv`,
               header: [
                   {id: 'cell_line', title: 'CELL'},
                   {id: 'usage', title: 'USAGE'}

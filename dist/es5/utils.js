@@ -69,6 +69,7 @@ var Notebook = /** @class */ (function () {
             this.source = this.source.concat(c.getSource());
         }
         // TODO: more module options
+        this.tree = ast.parse(this.source.join(''));
         this.moduleMap = specs_1.DefaultSpecs;
         this.analyzer = new data_flow_1.DataflowAnalyzer(this.moduleMap);
     }
@@ -219,7 +220,7 @@ var Notebook = /** @class */ (function () {
         return temp_walker.usages;
     };
     // used for dataset preprocess, it will generate all different dependency 
-    Notebook.prototype.extractEDA = function (output_path) {
+    Notebook.prototype.extractEDA = function (output_path, name) {
         // get all dependent code
         var code = this.source.join('');
         var tree = ast.parse(code);
@@ -233,6 +234,7 @@ var Notebook = /** @class */ (function () {
         var _loop_2 = function (usage) {
             if (isVisualization(usage)) {
                 var seed = new slice_1.LocationSet(usage.location);
+                // console.log(`${file_count}: slice out based on: ` + this.getCodeByLoc(usage.location));
                 var loc_set = slice_1.slice(tree, seed, this_2.analyzer, slice_1.SliceDirection.Backward);
                 var cur_line = 0; // line number of sliced code
                 var cell_usage_list = [];
@@ -251,24 +253,24 @@ var Notebook = /** @class */ (function () {
                     }
                     catch (_b) { }
                     if (usages.length == 0) {
-                        console.log("ignore");
+                        // console.log("ignore");
                         continue;
                     }
                     usages.forEach(function (u) {
-                        if (u.modulePath != '__builtins__') {
+                        if (u.modulePath != '__builtins__' && u.modulePath.split('.')[0] != 'matplotlib') {
                             want_1 = true;
                         }
                     });
                     cell_usage_list.push(convertToCellUsage(usages, cur_line));
                 }
                 if (want_1) {
-                    fs_1.default.writeFile(output_path + "_" + file_count + ".py", source, function (err) {
+                    fs_1.default.writeFile(output_path + "/" + name + "_" + file_count + ".py", source, function (err) {
                         if (err)
                             throw err;
                     });
                     var createCsvWriter = require('csv-writer').createObjectCsvWriter;
                     var csvWriter = createCsvWriter({
-                        path: output_path + "_" + file_count + ".csv",
+                        path: output_path + "/" + name + "_" + file_count + ".csv",
                         header: [
                             { id: 'cell_line', title: 'CELL' },
                             { id: 'usage', title: 'USAGE' }
