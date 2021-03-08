@@ -100,7 +100,7 @@ var SymbolTable = /** @class */ (function () {
     SymbolTable.prototype.importModule = function (modulePath, alias) {
         var spec = this.lookupSpec(this.jsonSpecs, modulePath.split('.'));
         if (!spec) {
-            console.log("*** WARNING no spec for module " + modulePath);
+            // console.log(`*** WARNING no spec for module ${modulePath}`);
             return;
         }
         if (modulePath) {
@@ -114,7 +114,7 @@ var SymbolTable = /** @class */ (function () {
         var _this = this;
         var spec = this.lookupSpec(this.jsonSpecs, namePath.split('.'));
         if (!spec) {
-            console.log("*** WARNING no spec for module " + namePath);
+            // console.log(`*** WARNING no spec for module ${namePath}`);
             return;
         }
         if (spec) {
@@ -138,7 +138,7 @@ var SymbolTable = /** @class */ (function () {
             });
         }
         else {
-            console.log("*** WARNING no spec for module " + namePath);
+            // console.log(`*** WARNING no spec for module ${namePath}`);
         }
     };
     SymbolTable.prototype.lookupSpec = function (map, parts) {
