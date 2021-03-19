@@ -7,9 +7,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 var rewrite_magics_1 = require("./rewrite-magics");
 var control_flow_1 = require("./control-flow");
@@ -17,7 +14,7 @@ var data_flow_1 = require("./data-flow");
 var slice_1 = require("./slice");
 var specs_1 = require("./specs");
 var visSpec = __importStar(require("./visualization_spec.json"));
-var fs_1 = __importDefault(require("fs"));
+// import fs from 'fs';
 var ast = __importStar(require("./python-parser"));
 var NBCell = /** @class */ (function () {
     function NBCell(source, id) {
@@ -30,12 +27,13 @@ var NBCell = /** @class */ (function () {
 }());
 exports.NBCell = NBCell;
 var Notebook = /** @class */ (function () {
-    function Notebook(path) {
-        var ipynb_json = JSON.parse(fs_1.default.readFileSync(path, 'utf8'));
+    function Notebook(ipynb_json) {
+        // const ipynb_json = JSON.parse(fs.readFileSync(path, 'utf8'));
         var magic_rewriter = new rewrite_magics_1.MagicsRewriter();
         var cell_no = [];
         this.cells = [];
         var count = 0;
+        var line_no = 0;
         for (var _i = 0, _a = ipynb_json.cells; _i < _a.length; _i++) {
             var c = _a[_i];
             if (c.cell_type == 'code') {
@@ -59,6 +57,7 @@ var Notebook = /** @class */ (function () {
                     }
                     code[code.length - 1] += "\n";
                 }
+                line_no += code.length;
                 this.cells.push(new NBCell(code, count));
                 count += 1;
             }
@@ -218,75 +217,6 @@ var Notebook = /** @class */ (function () {
         var temp_walker = new data_flow_1.ApiUsageAnalysis(temp_tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
         ast.walk(temp_tree, temp_walker);
         return temp_walker.usages;
-    };
-    // used for dataset preprocess, it will generate all different dependency 
-    Notebook.prototype.extractEDA = function (output_path, name) {
-        // get all dependent code
-        var code = this.source.join('');
-        var tree = ast.parse(code);
-        var cfg = new control_flow_1.ControlFlowGraph(tree);
-        // get definition from dependent code
-        var defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
-        var walker = new data_flow_1.ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
-        ast.walk(tree, walker);
-        // console.log(walker.usages)
-        var file_count = 0;
-        var _loop_2 = function (usage) {
-            if (isVisualization(usage)) {
-                var seed = new slice_1.LocationSet(usage.location);
-                // console.log(`${file_count}: slice out based on: ` + this.getCodeByLoc(usage.location));
-                var loc_set = slice_1.slice(tree, seed, this_2.analyzer, slice_1.SliceDirection.Backward);
-                var cur_line = 0; // line number of sliced code
-                var cell_usage_list = [];
-                // TODO: findout why sometime slicing is wrong, e.g. in 12718015.ipynb
-                var splited_set = this_2._splitSeeds(loc_set);
-                var source = '';
-                var want_1 = false;
-                for (var _i = 0, splited_set_1 = splited_set; _i < splited_set_1.length; _i++) {
-                    var _a = splited_set_1[_i], loc = _a[0], cell_no = _a[1];
-                    var temp_code = this_2.getCodeByLocSet(loc);
-                    source += temp_code.join('');
-                    cur_line += temp_code.length;
-                    var usages = [];
-                    try {
-                        usages = this_2._runAnalysis(temp_code.join(''), defsForMethodResolution);
-                    }
-                    catch (_b) { }
-                    if (usages.length == 0) {
-                        // console.log("ignore");
-                        continue;
-                    }
-                    usages.forEach(function (u) {
-                        if (u.modulePath != '__builtins__' && u.modulePath.split('.')[0] != 'matplotlib') {
-                            want_1 = true;
-                        }
-                    });
-                    cell_usage_list.push(convertToCellUsage(usages, cur_line));
-                }
-                if (want_1) {
-                    fs_1.default.writeFile(output_path + "/" + name + "_" + file_count + ".py", source, function (err) {
-                        if (err)
-                            throw err;
-                    });
-                    var createCsvWriter = require('csv-writer').createObjectCsvWriter;
-                    var csvWriter = createCsvWriter({
-                        path: output_path + "/" + name + "_" + file_count + ".csv",
-                        header: [
-                            { id: 'cell_line', title: 'CELL' },
-                            { id: 'usage', title: 'USAGE' }
-                        ]
-                    });
-                    csvWriter.writeRecords(cell_usage_list)
-                        .then(function () { });
-                    file_count += 1;
-                }
-            }
-        };
-        var this_2 = this;
-        for (var _i = 0, _a = walker.usages; _i < _a.length; _i++) {
-            var usage = _a[_i];
-            _loop_2(usage);
-        }
     };
     return Notebook;
 }());

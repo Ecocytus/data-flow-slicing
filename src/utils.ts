@@ -7,7 +7,7 @@ import { LocationSet, slice, SliceDirection } from './slice';
 import { Location } from './python-parser'
 import { DefaultSpecs, JsonSpecs, FunctionSpec, TypeSpec } from './specs';
 import * as visSpec from "./visualization_spec.json";
-import fs from 'fs';
+// import fs from 'fs';
 
 import * as ast from './python-parser';
 
@@ -36,12 +36,13 @@ export class Notebook {
   analyzer: DataflowAnalyzer;
   moduleMap: JsonSpecs;
 
-  constructor(path: string) {
-    const ipynb_json = JSON.parse(fs.readFileSync(path, 'utf8'));
+  constructor(ipynb_json: any) {
+    // const ipynb_json = JSON.parse(fs.readFileSync(path, 'utf8'));
     const magic_rewriter = new MagicsRewriter();
     var cell_no: number[] = [];
-    this.cells = []
-    var count = 0
+    this.cells = [];
+    var count = 0;
+    var line_no = 0;
     for (let c of ipynb_json.cells) {
         if (c.cell_type == 'code') {
             var codeList:string[] = []
@@ -60,6 +61,7 @@ export class Notebook {
                 }
                 code[code.length-1] += "\n"; 
             }
+            line_no += code.length;
             this.cells.push(new NBCell(code, count));
             count += 1;
         }
@@ -234,69 +236,68 @@ export class Notebook {
   
 
   // used for dataset preprocess, it will generate all different dependency 
-  extractEDA(output_path: string, name: string) {
-    // get all dependent code
-    var code= this.source.join('');
-    var tree = ast.parse(code)
-    var cfg = new ControlFlowGraph(tree);
-    // get definition from dependent code
-    let defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
-    var walker = new ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
-    ast.walk(tree, walker);
-    // console.log(walker.usages)
-    let file_count = 0;
-    for (let usage of walker.usages) {
-      if (isVisualization(usage)) {
-        let seed = new LocationSet(usage.location);
-        // console.log(`${file_count}: slice out based on: ` + this.getCodeByLoc(usage.location));
-        let loc_set = slice(tree, seed, this.analyzer, SliceDirection.Backward);
-        let cur_line = 0; // line number of sliced code
-        let cell_usage_list: CellUsage[] = [];
-        // TODO: findout why sometime slicing is wrong, e.g. in 12718015.ipynb
-        let splited_set = this._splitSeeds(loc_set);
-        let source: string = '';
-        let want = false;
-        for (const [loc, cell_no] of splited_set) {
-          let temp_code = this.getCodeByLocSet(loc);
-          source += temp_code.join('');
-          cur_line += temp_code.length;
-          let usages: ApiUsage[] = [];
-          try {
-            usages = this._runAnalysis(temp_code.join(''), defsForMethodResolution);
-          } catch {}
-          if (usages.length == 0) {
-            // console.log("ignore");
-            continue;
-          }
+  // extractEDA(output_path: string, name: string) {
+  //   // get all dependent code
+  //   var tree = this.tree;
+  //   var cfg = new ControlFlowGraph(tree);
+  //   // get definition from dependent code
+  //   let defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
+  //   var walker = new ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
+  //   ast.walk(tree, walker);
+  //   // console.log(walker.usages)
+  //   let file_count = 0;
+  //   for (let usage of walker.usages) {
+  //     if (isVisualization(usage)) {
+  //       let seed = new LocationSet(usage.location);
+  //       // console.log(`${file_count}: slice out based on: ` + this.getCodeByLoc(usage.location));
+  //       let loc_set = slice(tree, seed, this.analyzer, SliceDirection.Backward);
+  //       let cur_line = 0; // line number of sliced code
+  //       let cell_usage_list: CellUsage[] = [];
+  //       // TODO: findout why sometime slicing is wrong, e.g. in 12718015.ipynb
+  //       let splited_set = this._splitSeeds(loc_set);
+  //       let source: string = '';
+  //       let want = false;
+  //       for (const [loc, cell_no] of splited_set) {
+  //         let temp_code = this.getCodeByLocSet(loc);
+  //         source += temp_code.join('');
+  //         cur_line += temp_code.length;
+  //         let usages: ApiUsage[] = [];
+  //         try {
+  //           usages = this._runAnalysis(temp_code.join(''), defsForMethodResolution);
+  //         } catch {}
+  //         if (usages.length == 0) {
+  //           // console.log("ignore");
+  //           continue;
+  //         }
           
-          usages.forEach(u => {
-            if (u.modulePath != '__builtins__' && u.modulePath.split('.')[0] != 'matplotlib') {
-              want = true;
-            }
-          });
-          cell_usage_list.push(convertToCellUsage(usages, cur_line));
-        }
+  //         usages.forEach(u => {
+  //           if (u.modulePath != '__builtins__' && u.modulePath.split('.')[0] != 'matplotlib') {
+  //             want = true;
+  //           }
+  //         });
+  //         cell_usage_list.push(convertToCellUsage(usages, cur_line));
+  //       }
 
-        if (want) {
-          fs.writeFile(`${output_path}/${name}_${file_count}.py`, source, function(err) {
-            if (err) throw err;
-          });
+  //       if (want) {
+  //         fs.writeFile(`${output_path}/${name}_${file_count}.py`, source, function(err) {
+  //           if (err) throw err;
+  //         });
 
-          const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-          const csvWriter = createCsvWriter({
-              path: `${output_path}/${name}_${file_count}.csv`,
-              header: [
-                  {id: 'cell_line', title: 'CELL'},
-                  {id: 'usage', title: 'USAGE'}
-              ]
-          });
-          csvWriter.writeRecords(cell_usage_list)
-            .then(() => {});
-          file_count += 1;
-        }
-      }
-    }
-  }
+  //         const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+  //         const csvWriter = createCsvWriter({
+  //             path: `${output_path}/${name}_${file_count}.csv`,
+  //             header: [
+  //                 {id: 'cell_line', title: 'CELL'},
+  //                 {id: 'usage', title: 'USAGE'}
+  //             ]
+  //         });
+  //         csvWriter.writeRecords(cell_usage_list)
+  //           .then(() => {});
+  //         file_count += 1;
+  //       }
+  //     }
+  //   }
+  // }
 }
 
 function convertToCellUsage(apiUsages: ApiUsage[], cell_line: number) : CellUsage {

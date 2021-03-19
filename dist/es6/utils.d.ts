@@ -18,7 +18,7 @@ export declare class Notebook {
     cfg: ControlFlowGraph;
     analyzer: DataflowAnalyzer;
     moduleMap: JsonSpecs;
-    constructor(path: string);
+    constructor(ipynb_json: any);
     getCell(id: number): NBCell;
     getCellNo(line_no: number): number;
     getSize(): number;
@@ -32,6 +32,5 @@ export declare class Notebook {
     getCodeByLocSet(locset: LocationSet, col_slicing?: boolean): string[];
     _splitSeeds(plotSeedLocations: LocationSet): [LocationSet, number][];
     _runAnalysis(source: string, defsForMethodResolution: RefSet): ApiUsage[];
-    extractEDA(output_path: string, name: string): void;
 }
 export declare function parse_func(func: ast.SyntaxNode): string[];
