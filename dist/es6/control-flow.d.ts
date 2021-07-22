@@ -16,7 +16,7 @@ export declare class ControlFlowGraph {
     private loopVariables;
     constructor(node: ast.SyntaxNode);
     private makeBlock;
-    readonly blocks: Block[];
+    get blocks(): Block[];
     getSuccessors(block: Block): Block[];
     getPredecessors(block: Block): Block[];
     print(): void;

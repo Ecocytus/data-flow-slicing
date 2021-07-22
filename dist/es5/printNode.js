@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.printNode = void 0;
 var comma = ', ';
 // tslint:disable-next-line: max-func-body-length
 function printTabbed(node, tabLevel) {

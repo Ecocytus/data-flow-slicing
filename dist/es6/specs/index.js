@@ -15,5 +15,5 @@ import * as matplotlib from "./matplotlib.json";
 import * as pandas from "./pandas.json";
 import * as sklearn from "./sklearn.json";
 import * as numpy from "./numpy.json";
-export var DefaultSpecs = __assign({}, builtins, random, matplotlib, pandas, sklearn, numpy);
+export var DefaultSpecs = __assign(__assign(__assign(__assign(__assign(__assign({}, builtins), random), matplotlib), pandas), sklearn), numpy);
 //# sourceMappingURL=index.js.map

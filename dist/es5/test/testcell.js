@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.TestCell = void 0;
 var TestCell = /** @class */ (function () {
     function TestCell(text, executionCount, executionEventId, persistentId, hasError) {
         if (hasError === void 0) { hasError = false; }

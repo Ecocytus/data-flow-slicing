@@ -11,6 +11,13 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 import { parse } from './python-parser';
 import { ControlFlowGraph } from './control-flow';
 import { DataflowAnalyzer } from './data-flow';
@@ -25,9 +32,9 @@ var LocationSet = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             items[_i] = arguments[_i];
         }
-        return _super.apply(this, [function (l) {
+        return _super.apply(this, __spreadArrays([function (l) {
                 return [l.first_line, l.first_column, l.last_line, l.last_column].toString();
-            }].concat(items)) || this;
+            }], items)) || this;
     }
     return LocationSet;
 }(Set));
@@ -73,7 +80,7 @@ export function slice(ast, seedLocations, dataflowAnalyzer, direction) {
     if (seedLocations) {
         var seedStatementLocations_1 = findSeedStatementLocations(seedLocations, cfg);
         acceptLocation = function (loc) { return seedStatementLocations_1.some(function (seedStmtLoc) { return intersect(seedStmtLoc, loc); }); };
-        sliceLocations = new (LocationSet.bind.apply(LocationSet, [void 0].concat(seedStatementLocations_1.items)))();
+        sliceLocations = new (LocationSet.bind.apply(LocationSet, __spreadArrays([void 0], seedStatementLocations_1.items)))();
     }
     var lastSize;
     do {

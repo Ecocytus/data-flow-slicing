@@ -12,14 +12,34 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
     return result;
 };
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ApiUsageAnalysis = exports.sameLocation = exports.RefSet = exports.SymbolType = exports.ReferenceType = exports.DataflowAnalyzer = void 0;
 var ast = __importStar(require("./python-parser"));
 var control_flow_1 = require("./control-flow");
 var set_1 = require("./set");
@@ -36,12 +56,12 @@ var DefUse = /** @class */ (function () {
     }
     Object.defineProperty(DefUse.prototype, "defs", {
         get: function () { return this.DEFINITION.union(this.UPDATE); },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Object.defineProperty(DefUse.prototype, "uses", {
         get: function () { return this.UPDATE.union(this.USE); },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     DefUse.prototype.union = function (that) {
@@ -222,7 +242,7 @@ var DataflowAnalyzer = /** @class */ (function () {
     };
     DataflowAnalyzer.prototype.getImportFromDefs = function (from) {
         this._symbolTable.importModuleDefinitions(from.base, from.imports);
-        return new (RefSet.bind.apply(RefSet, [void 0].concat(from.imports.map(function (i) {
+        return new (RefSet.bind.apply(RefSet, __spreadArrays([void 0], from.imports.map(function (i) {
             return {
                 type: SymbolType.IMPORT,
                 level: ReferenceType.DEFINITION,
@@ -237,7 +257,7 @@ var DataflowAnalyzer = /** @class */ (function () {
         imprt.names.forEach(function (imp) {
             var spec = _this._symbolTable.importModule(imp.path, imp.name);
         });
-        return new (RefSet.bind.apply(RefSet, [void 0].concat(imprt.names.map(function (nameNode) {
+        return new (RefSet.bind.apply(RefSet, __spreadArrays([void 0], imprt.names.map(function (nameNode) {
             return {
                 type: SymbolType.IMPORT,
                 level: ReferenceType.DEFINITION,
@@ -262,7 +282,7 @@ var DataflowAnalyzer = /** @class */ (function () {
     };
     DataflowAnalyzer.prototype.getNameUses = function (statement) {
         var usedNames = gatherNames(statement);
-        return new (RefSet.bind.apply(RefSet, [void 0].concat(usedNames.items.map(function (_a) {
+        return new (RefSet.bind.apply(RefSet, __spreadArrays([void 0], usedNames.items.map(function (_a) {
             var name = _a[0], node = _a[1];
             return {
                 type: SymbolType.VARIABLE,
@@ -287,7 +307,7 @@ var DataflowAnalyzer = /** @class */ (function () {
     DataflowAnalyzer.prototype.getAssignUses = function (assign) {
         // XXX: Is this supposed to union with funcArgs?
         var targetNames = gatherNames(assign.targets);
-        var targets = new (RefSet.bind.apply(RefSet, [void 0].concat(targetNames.items.map(function (_a) {
+        var targets = new (RefSet.bind.apply(RefSet, __spreadArrays([void 0], targetNames.items.map(function (_a) {
             var name = _a[0], node = _a[1];
             return {
                 type: SymbolType.VARIABLE,
@@ -298,7 +318,7 @@ var DataflowAnalyzer = /** @class */ (function () {
             };
         }))))();
         var sourceNames = gatherNames(assign.sources);
-        var sources = new (RefSet.bind.apply(RefSet, [void 0].concat(sourceNames.items.map(function (_a) {
+        var sources = new (RefSet.bind.apply(RefSet, __spreadArrays([void 0], sourceNames.items.map(function (_a) {
             var name = _a[0], node = _a[1];
             return {
                 type: SymbolType.VARIABLE,
@@ -335,7 +355,7 @@ var RefSet = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             items[_i] = arguments[_i];
         }
-        return _super.apply(this, [function (r) { return r.name + r.level + ast.locationString(r.location); }].concat(items)) || this;
+        return _super.apply(this, __spreadArrays([function (r) { return r.name + r.level + ast.locationString(r.location); }], items)) || this;
     }
     return RefSet;
 }(set_1.Set));
@@ -360,7 +380,7 @@ var NameSet = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             items[_i] = arguments[_i];
         }
-        return _super.apply(this, [getNameSetId].concat(items)) || this;
+        return _super.apply(this, __spreadArrays([getNameSetId], items)) || this;
     }
     return NameSet;
 }(set_1.Set));
@@ -370,7 +390,7 @@ function gatherNames(node) {
         return (_a = new NameSet()).union.apply(_a, node.map(gatherNames));
     }
     else {
-        return new (NameSet.bind.apply(NameSet, [void 0].concat(ast
+        return new (NameSet.bind.apply(NameSet, __spreadArrays([void 0], ast
             .walk(node)
             .filter(function (e) { return e.type == ast.NAME; })
             .map(function (e) { return [e.id, e]; }))))();
@@ -657,7 +677,7 @@ var ParameterSideEffectAnalysis = /** @class */ (function (_super) {
     }
     ParameterSideEffectAnalysis.prototype.getTransitiveClosure = function (flows) {
         var nodes = flows.map(getNodeId, function (df) { return df.fromNode; }).union(flows.map(getNodeId, function (df) { return df.toNode; }));
-        var result = new (set_1.Set.bind.apply(set_1.Set, [void 0, getDataflowId].concat(flows.items)))();
+        var result = new (set_1.Set.bind.apply(set_1.Set, __spreadArrays([void 0, getDataflowId], flows.items)))();
         nodes.items.forEach(function (from) {
             return nodes.items.forEach(function (to) {
                 return nodes.items.forEach(function (middle) {
@@ -728,7 +748,7 @@ var ParameterSideEffectAnalysis = /** @class */ (function (_super) {
     return ParameterSideEffectAnalysis;
 }(AnalysisWalker));
 function getParameterRefs(def) {
-    return new (RefSet.bind.apply(RefSet, [void 0].concat(def.params.map(function (p) {
+    return new (RefSet.bind.apply(RefSet, __spreadArrays([void 0], def.params.map(function (p) {
         return ({ name: p.name, level: ReferenceType.DEFINITION, type: SymbolType.VARIABLE, location: p.location, node: p });
     }))))();
 }

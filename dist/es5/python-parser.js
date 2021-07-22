@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.walk = exports.flatten = exports.isEquivalent = exports.CLASS = exports.LITERAL = exports.NAME = exports.DICT = exports.SET = exports.LIST = exports.TUPLE = exports.STARRED = exports.BINOP = exports.UNOP = exports.LAMBDA = exports.IFEXPR = exports.DOT = exports.SLICE = exports.INDEX = exports.ARG = exports.CALL = exports.WITH = exports.TRY = exports.COMPIF = exports.COMPFOR = exports.FOR = exports.ELSE = exports.WHILE = exports.IF = exports.NONLOCAL = exports.GLOBAL = exports.CONTINUE = exports.BREAK = exports.RAISE = exports.YIELD = exports.RETURN = exports.PASS = exports.ASSERT = exports.ASSIGN = exports.PARAMETER = exports.DEF = exports.DECORATE = exports.DECORATOR = exports.FROM = exports.IMPORT = exports.MODULE = exports.locationContains = exports.locationString = exports.parse = void 0;
 var python3_1 = require("./python3");
 var printNode_1 = require("./printNode");
 /**

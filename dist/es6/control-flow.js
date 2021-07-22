@@ -11,6 +11,13 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 import * as ast from './python-parser';
 import { Set } from './set';
 import { printNode } from './printNode';
@@ -38,7 +45,7 @@ var BlockSet = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             items[_i] = arguments[_i];
         }
-        return _super.apply(this, [function (b) { return b.id.toString(); }].concat(items)) || this;
+        return _super.apply(this, __spreadArrays([function (b) { return b.id.toString(); }], items)) || this;
     }
     return BlockSet;
 }(Set));
@@ -108,7 +115,7 @@ var ControlFlowGraph = /** @class */ (function () {
             }
             return visited;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     ControlFlowGraph.prototype.getSuccessors = function (block) {
@@ -395,7 +402,7 @@ var ControlFlowGraph = /** @class */ (function () {
                 var oldPostdominators = postdominators[block.id];
                 var successors = this_2.getSuccessors(block);
                 // Merge postdominators that appear in all of a block's successors.
-                var newPostdominators = new (PostdominatorSet.bind.apply(PostdominatorSet, [void 0].concat([]
+                var newPostdominators = new (PostdominatorSet.bind.apply(PostdominatorSet, __spreadArrays([void 0], []
                     .concat.apply([], successors.map(function (s) { return postdominators[s.id].items; })).reduce(function (pCounts, p) {
                     var countIndex = pCounts.findIndex(function (record) {
                         return record.p.postdominator == p.postdominator;
@@ -456,7 +463,7 @@ var ControlFlowGraph = /** @class */ (function () {
                 return a.distance - b.distance;
             })[0]);
         });
-        return new (PostdominatorSet.bind.apply(PostdominatorSet, [void 0].concat(immediatePostdominators)))();
+        return new (PostdominatorSet.bind.apply(PostdominatorSet, __spreadArrays([void 0], immediatePostdominators)))();
     };
     ControlFlowGraph.prototype.buildReverseDominanceFrontiers = function (blocks) {
         var frontiers = {};
@@ -521,7 +528,7 @@ var PostdominatorSet = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             items[_i] = arguments[_i];
         }
-        return _super.apply(this, [function (p) { return p.block.id + ',' + p.postdominator.id; }].concat(items)) || this;
+        return _super.apply(this, __spreadArrays([function (p) { return p.block.id + ',' + p.postdominator.id; }], items)) || this;
     }
     return PostdominatorSet;
 }(Set));

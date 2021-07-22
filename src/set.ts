@@ -38,6 +38,10 @@ export class Set<T> {
     return Object.keys(this._items).map(k => this._items[k]);
   }
 
+  public toString(): string[] {
+    return Object.keys(this._items);
+  }
+
   public equals(that: Set<T>): boolean {
     return (
       this.size == that.size && this.items.every(item => that.has(item))

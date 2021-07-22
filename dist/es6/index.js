@@ -4,6 +4,7 @@ export * from './control-flow';
 export * from './data-flow';
 export * from './printNode';
 export * from './specs';
+export * from './cell';
 export * from './slice';
 export * from './cellslice';
 export * from './log-slicer';

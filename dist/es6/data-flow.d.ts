@@ -8,8 +8,8 @@ declare class DefUse {
     UPDATE: RefSet;
     USE: RefSet;
     constructor(DEFINITION?: RefSet, UPDATE?: RefSet, USE?: RefSet);
-    readonly defs: Set<Ref>;
-    readonly uses: Set<Ref>;
+    get defs(): Set<Ref>;
+    get uses(): Set<Ref>;
     union(that: DefUse): DefUse;
     update(newRefs: DefUse): void;
     equals(that: DefUse): boolean;

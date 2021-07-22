@@ -12,7 +12,15 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.range = exports.NumberSet = exports.StringSet = exports.Set = void 0;
 var Set = /** @class */ (function () {
     // Two items A and B are considered the same value iff getIdentifier(A) === getIdentifier(B).
     function Set(getIdentifier) {
@@ -30,7 +38,7 @@ var Set = /** @class */ (function () {
         get: function () {
             return this.items.length;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Set.prototype.add = function () {
@@ -63,9 +71,12 @@ var Set = /** @class */ (function () {
             var _this = this;
             return Object.keys(this._items).map(function (k) { return _this._items[k]; });
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
+    Set.prototype.toString = function () {
+        return Object.keys(this._items);
+    };
     Set.prototype.equals = function (that) {
         return (this.size == that.size && this.items.every(function (item) { return that.has(item); }));
     };
@@ -73,7 +84,7 @@ var Set = /** @class */ (function () {
         get: function () {
             return Object.keys(this._items).length == 0;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Set.prototype.union = function () {
@@ -82,25 +93,25 @@ var Set = /** @class */ (function () {
         for (var _i = 0; _i < arguments.length; _i++) {
             those[_i] = arguments[_i];
         }
-        return new (Set.bind.apply(Set, [void 0, this.getIdentifier].concat((_a = this.items).concat.apply(_a, those.map(function (that) { return that.items; })))))();
+        return new (Set.bind.apply(Set, __spreadArrays([void 0, this.getIdentifier], (_a = this.items).concat.apply(_a, those.map(function (that) { return that.items; })))))();
     };
     Set.prototype.intersect = function (that) {
-        return new (Set.bind.apply(Set, [void 0, this.getIdentifier].concat(this.items.filter(function (item) { return that.has(item); }))))();
+        return new (Set.bind.apply(Set, __spreadArrays([void 0, this.getIdentifier], this.items.filter(function (item) { return that.has(item); }))))();
     };
     Set.prototype.filter = function (predicate) {
-        return new (Set.bind.apply(Set, [void 0, this.getIdentifier].concat(this.items.filter(predicate))))();
+        return new (Set.bind.apply(Set, __spreadArrays([void 0, this.getIdentifier], this.items.filter(predicate))))();
     };
     Set.prototype.map = function (getIdentifier, transform) {
-        return new (Set.bind.apply(Set, [void 0, getIdentifier].concat(this.items.map(transform))))();
+        return new (Set.bind.apply(Set, __spreadArrays([void 0, getIdentifier], this.items.map(transform))))();
     };
     Set.prototype.mapSame = function (transform) {
-        return new (Set.bind.apply(Set, [void 0, this.getIdentifier].concat(this.items.map(transform))))();
+        return new (Set.bind.apply(Set, __spreadArrays([void 0, this.getIdentifier], this.items.map(transform))))();
     };
     Set.prototype.some = function (predicate) {
         return this.items.some(predicate);
     };
     Set.prototype.minus = function (that) {
-        return new (Set.bind.apply(Set, [void 0, this.getIdentifier].concat(this.items.filter(function (x) { return !that.has(x); }))))();
+        return new (Set.bind.apply(Set, __spreadArrays([void 0, this.getIdentifier], this.items.filter(function (x) { return !that.has(x); }))))();
     };
     Set.prototype.take = function () {
         if (this.empty) {
@@ -113,10 +124,10 @@ var Set = /** @class */ (function () {
     };
     Set.prototype.product = function (that) {
         var _this = this;
-        return new (Set.bind.apply(Set, [void 0, function (_a) {
+        return new (Set.bind.apply(Set, __spreadArrays([void 0, function (_a) {
                 var x = _a[0], y = _a[1];
                 return _this.getIdentifier(x) + that.getIdentifier(y);
-            }].concat(flatten.apply(void 0, this.items.map(function (x) {
+            }], flatten.apply(void 0, this.items.map(function (x) {
             return flatten(that.items.map(function (y) { return [x, y]; }));
         })))))();
     };
@@ -130,7 +141,7 @@ var StringSet = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             items[_i] = arguments[_i];
         }
-        return _super.apply(this, [function (s) { return s; }].concat(items)) || this;
+        return _super.apply(this, __spreadArrays([function (s) { return s; }], items)) || this;
     }
     return StringSet;
 }(Set));
@@ -142,7 +153,7 @@ var NumberSet = /** @class */ (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             items[_i] = arguments[_i];
         }
-        return _super.apply(this, [function (n) { return n.toString(); }].concat(items)) || this;
+        return _super.apply(this, __spreadArrays([function (n) { return n.toString(); }], items)) || this;
     }
     return NumberSet;
 }(Set));
@@ -152,7 +163,7 @@ function range(min, max) {
     for (var i = min; i < max; i++) {
         numbers.push(i);
     }
-    return new (NumberSet.bind.apply(NumberSet, [void 0].concat(numbers)))();
+    return new (NumberSet.bind.apply(NumberSet, __spreadArrays([void 0], numbers)))();
 }
 exports.range = range;
 function flatten() {

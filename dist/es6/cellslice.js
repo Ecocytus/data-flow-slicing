@@ -14,7 +14,7 @@ var CellSlice = /** @class */ (function () {
         get: function () {
             return this.getTextSlice(false);
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Object.defineProperty(CellSlice.prototype, "textSliceLines", {
@@ -24,7 +24,7 @@ var CellSlice = /** @class */ (function () {
         get: function () {
             return this.getTextSlice(true);
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     CellSlice.prototype.getTextSlice = function (fullLines) {
@@ -64,7 +64,7 @@ var CellSlice = /** @class */ (function () {
         set: function (slice) {
             this._slice = slice;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     return CellSlice;

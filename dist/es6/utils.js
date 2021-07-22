@@ -5,7 +5,6 @@ import { DataflowAnalyzer, RefSet, ApiUsageAnalysis } from './data-flow';
 import { LocationSet, slice, SliceDirection } from './slice';
 import { DefaultSpecs } from './specs';
 import * as visSpec from "./visualization_spec.json";
-// import fs from 'fs';
 import * as ast from './python-parser';
 var NBCell = /** @class */ (function () {
     function NBCell(source, id) {
@@ -209,17 +208,151 @@ var Notebook = /** @class */ (function () {
         ast.walk(temp_tree, temp_walker);
         return temp_walker.usages;
     };
+    // used to crate a "fake" EDA based on all code
+    Notebook.prototype.convertNotebookToEDA = function (output_path, name) {
+        // get all dependent code
+        var tree = this.tree;
+        var cfg = new ControlFlowGraph(tree);
+        // get definition from dependent code
+        var defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
+        var walker = new ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
+        ast.walk(tree, walker);
+        var cell_usage_list = [];
+        var pre_cellno = 1;
+        var want = true;
+        for (var idx = 0; idx < this.cells.length; ++idx) {
+            var cell = this.cells[idx];
+            var cur_cellno = pre_cellno + cell.getLength();
+            var cur_loc = new LocationSet();
+            cur_loc.add({
+                first_line: pre_cellno,
+                first_column: 0,
+                last_line: cur_cellno - 1,
+                last_column: 999
+            });
+            pre_cellno = cur_cellno;
+            var temp_code = cell.source;
+            var usages = [];
+            try {
+                usages = this._runAnalysis(temp_code.join(''), defsForMethodResolution);
+            }
+            catch (_a) { }
+            // if (usages.length == 0) {
+            //   // console.log("ignore");
+            //   // continue;
+            //   want = false
+            //   continue
+            // }
+            cell_usage_list.push(convertToCellUsage(usages, cur_loc));
+        }
+        if (want) {
+            var createCsvWriter = require('csv-writer').createObjectCsvWriter;
+            var csvWriter = createCsvWriter({
+                path: output_path + "/" + name + ".csv",
+                header: [
+                    { id: 'cell_locs', title: 'LOC' },
+                    { id: 'usage', title: 'USAGE' }
+                ]
+            });
+            csvWriter.writeRecords(cell_usage_list)
+                .then(function () { });
+        }
+    };
+    // used for dataset preprocess, it will generate all different dependency 
+    Notebook.prototype.extractEDA = function (output_path, name, max_slices) {
+        if (max_slices == null) {
+            max_slices = 50;
+        }
+        // get all dependent code
+        var tree = this.tree;
+        var cfg = new ControlFlowGraph(tree);
+        // get definition from dependent code
+        var defsForMethodResolution = this.analyzer.analyze(cfg).statementDefs;
+        var walker = new ApiUsageAnalysis(tree, this.analyzer.getSymbolTable(), defsForMethodResolution);
+        ast.walk(tree, walker);
+        // console.log(walker.usages)
+        var file_count = 0;
+        var _loop_2 = function (usage) {
+            if (file_count > max_slices) {
+                return "break";
+            }
+            // if this part of code contains visualization, then backtrack
+            if (isVisualization(usage)) {
+                var seed = new LocationSet(usage.location);
+                // console.log(`${file_count}: slice out based on: ` + this.getCodeByLoc(usage.location));
+                var loc_set = slice(tree, seed, this_2.analyzer, SliceDirection.Backward);
+                var cur_line = 0; // line number of sliced code
+                var cell_usage_list = [];
+                // TODO: findout why sometime slicing is wrong, e.g. in 12718015.ipynb
+                var splited_set = this_2._splitSeeds(loc_set);
+                var source = '';
+                var want_1 = false;
+                for (var _i = 0, splited_set_1 = splited_set; _i < splited_set_1.length; _i++) {
+                    var _a = splited_set_1[_i], loc = _a[0], cell_no = _a[1];
+                    var temp_code = this_2.getCodeByLocSet(loc);
+                    // TODO: get cell place given loc
+                    source += temp_code.join('');
+                    cur_line += temp_code.length;
+                    var usages = [];
+                    try {
+                        usages = this_2._runAnalysis(temp_code.join(''), defsForMethodResolution);
+                    }
+                    catch (_b) { }
+                    if (usages.length == 0) {
+                        // console.log("ignore");
+                        continue;
+                    }
+                    usages.forEach(function (u) {
+                        if (u.modulePath != '__builtins__' && u.modulePath.split('.')[0] != 'matplotlib') {
+                            want_1 = true;
+                        }
+                    });
+                    cell_usage_list.push(convertToCellUsage(usages, loc));
+                }
+                if (want_1) {
+                    // fs.writeFile(`${output_path}/${name}_${file_count}.py`, source, function(err) {
+                    //   if (err) throw err;
+                    // });
+                    var createCsvWriter = require('csv-writer').createObjectCsvWriter;
+                    var csvWriter = createCsvWriter({
+                        path: output_path + "/" + name + "_" + file_count + ".csv",
+                        header: [
+                            { id: 'cell_locs', title: 'LOC' },
+                            { id: 'usage', title: 'USAGE' }
+                        ]
+                    });
+                    csvWriter.writeRecords(cell_usage_list)
+                        .then(function () { });
+                    file_count += 1;
+                }
+            }
+        };
+        var this_2 = this;
+        for (var _i = 0, _a = walker.usages.sort(function () { return 0.5 - Math.random(); }); _i < _a.length; _i++) {
+            var usage = _a[_i];
+            var state_1 = _loop_2(usage);
+            if (state_1 === "break")
+                break;
+        }
+    };
     return Notebook;
 }());
 export { Notebook };
-function convertToCellUsage(apiUsages, cell_line) {
+function convertToCellUsage(apiUsages, loc) {
     var usageSet = new Set();
     for (var _i = 0, apiUsages_1 = apiUsages; _i < apiUsages_1.length; _i++) {
         var u = apiUsages_1[_i];
         usageSet.add(u.modulePath + ', ' + u.funcName);
     }
-    return { cell_line: cell_line, usage: Array.from(usageSet).join(', ') };
+    return { cell_locs: loc.toString().join(';'), usage: Array.from(usageSet).join(', ') };
 }
+// function convertToCellUsage(apiUsages: ApiUsage[], cell_line: number) : CellUsage {
+//   let usageSet: Set<string> = new Set();
+//   for (let u of apiUsages) {
+//     usageSet.add(u.modulePath + ', ' + u.funcName);
+//   }
+//   return { cell_line: cell_line, usage: Array.from(usageSet).join(', ') };
+// }
 function isVisualization(usage) {
     var path = usage.modulePath.split('.');
     var spec = visSpec;

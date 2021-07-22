@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.PylabLineMagicRewriter = exports.TimeLineMagicRewriter = exports.MagicsRewriter = void 0;
 /**
  * Utility to rewrite IPython code to remove magics.
  * Should be applied at to cells, not the entire program, to properly handle cell magics.

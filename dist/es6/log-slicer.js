@@ -1,3 +1,10 @@
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 import { CellSlice } from './cellslice';
 import { ProgramBuilder } from './program-builder';
 import { LocationSet, slice, SliceDirection } from './slice';
@@ -178,7 +185,7 @@ var ExecutionLogSlicer = /** @class */ (function () {
         get: function () {
             return this.executionLog;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     /**
@@ -200,11 +207,11 @@ var ExecutionLogSlicer = /** @class */ (function () {
         sameCell.forEach(function (cp) {
             return lines = lines.union(program.cellToLineMap[cp.cell.executionEventId]);
         });
-        var seedLocations = new (LocationSet.bind.apply(LocationSet, [void 0].concat(lines.items.map(function (line) {
+        var seedLocations = new (LocationSet.bind.apply(LocationSet, __spreadArrays([void 0], lines.items.map(function (line) {
             return ({ first_line: line, first_column: 0, last_line: line, last_column: 1 });
         }))))();
         var sliceLocations = slice(program.tree, seedLocations, undefined, SliceDirection.Forward).items;
-        return new (Set.bind.apply(Set, [void 0, function (c) { return c.persistentId; }].concat(sliceLocations.map(function (loc) { return program.lineToCellMap[loc.first_line]; }))))().items.filter(function (c) { return c.executionEventId !== executionEventId; });
+        return new (Set.bind.apply(Set, __spreadArrays([void 0, function (c) { return c.persistentId; }], sliceLocations.map(function (loc) { return program.lineToCellMap[loc.first_line]; }))))().items.filter(function (c) { return c.executionEventId !== executionEventId; });
     };
     return ExecutionLogSlicer;
 }());

@@ -32,5 +32,7 @@ export declare class Notebook {
     getCodeByLocSet(locset: LocationSet, col_slicing?: boolean): string[];
     _splitSeeds(plotSeedLocations: LocationSet): [LocationSet, number][];
     _runAnalysis(source: string, defsForMethodResolution: RefSet): ApiUsage[];
+    convertNotebookToEDA(output_path: string, name: string): void;
+    extractEDA(output_path: string, name: string, max_slices?: number): void;
 }
 export declare function parse_func(func: ast.SyntaxNode): string[];

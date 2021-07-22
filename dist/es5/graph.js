@@ -1,5 +1,13 @@
 "use strict";
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Graph = void 0;
 var _1 = require(".");
 var Graph = /** @class */ (function () {
     function Graph(getIdentifier) {
@@ -23,13 +31,13 @@ var Graph = /** @class */ (function () {
     Object.defineProperty(Graph.prototype, "nodes", {
         // tslint:disable-next-line: prefer-array-literal
         get: function () { return this._nodes.items; },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Graph.prototype.topoSort = function () {
         var _this = this;
         var sorted = [];
-        var work = new (_1.Set.bind.apply(_1.Set, [void 0, this.getIdentifier].concat(this.nodes.filter(function (n) { return !_this.incoming.has(n); }))))();
+        var work = new (_1.Set.bind.apply(_1.Set, __spreadArrays([void 0, this.getIdentifier], this.nodes.filter(function (n) { return !_this.incoming.has(n); }))))();
         var _loop_1 = function () {
             var n = work.pop();
             sorted.push(n);
