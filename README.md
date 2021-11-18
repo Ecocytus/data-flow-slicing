@@ -1,7 +1,9 @@
-# python-program-analysis
+# python-program-analysis (Modified)
 
 A Typescript library for parsing Python 3 and doing basic program analysis, 
 like forming control-flow graphs and def-use chains.
+
+**Modification**: Added features to record the dataflow, and slice the program into pieces based on seed data.
 
 ## Parsing
 
